@@ -16,11 +16,17 @@ export const ESCAPE_CHARACTER = '\\';
 export class Name {
 
     private delimiter: string = DEFAULT_DELIMITER;
+    protected noComponents: number = 0;
     private components: string[] = [];
 
     /** Expects that all Name components are properly masked */
-    constructor(other: string[], delimiter?: string) {
-        throw new Error("needs implementation or deletion");
+    constructor(source: string[], delimiter: string = DEFAULT_DELIMITER) {
+        this.delimiter = delimiter;
+        
+        // Copy the source array to the internal components array
+        this.components = [...source]; 
+
+        this.noComponents = this.components.length;
     }
 
     /**
@@ -29,9 +35,9 @@ export class Name {
      * Users can vary the delimiter character to be used
      */
     public asString(delimiter: string = this.delimiter): string {
-        throw new Error("needs implementation or deletion");
+        // Simple join of components using the specified delimiter.
+        return this.components.join(delimiter);
     }
-
     /** 
      * Returns a machine-readable representation of Name instance using default control characters
      * Machine-readable means that from a data string, a Name can be parsed back in
@@ -56,15 +62,19 @@ export class Name {
     }
 
     /** Expects that new Name component c is properly masked */
-    public insert(i: number, c: string): void {
-        throw new Error("needs implementation or deletion");
+    public insert(n: number, c: string): void {
+        // Insert component 'c' at index 'n' (splice(index, deleteCount, items...))
+        this.components.splice(n, 0, c);
+        this.noComponents = this.components.length;
     }
 
     /** Expects that new Name component c is properly masked */
     public append(c: string): void {
-        throw new Error("needs implementation or deletion");
+        // Append component 'c' to the end of the internal array.
+        this.components.push(c);
+        // Update the component count.
+        this.noComponents = this.components.length;
     }
-
     public remove(i: number): void {
         throw new Error("needs implementation or deletion");
     }
