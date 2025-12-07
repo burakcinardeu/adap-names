@@ -4,68 +4,99 @@ import { AbstractName } from "./AbstractName";
 
 export class StringName extends AbstractName {
 
-    protected name: string = "";
-    protected noComponents: number = 0;
+    protected components: string[] = []; 
 
-    constructor(source: string, delimiter?: string) {
-        super();
-        throw new Error("needs implementation or deletion");
+    /**
+     * Constructor: Parses the source string into components, respecting the escape character.
+     * @param source The full name string (e.g., "a\.b.c").
+     * @param delimiter The delimiter character to use.
+     */
+    constructor(source: string, delimiter: string = DEFAULT_DELIMITER) {
+        super(delimiter); 
+        
+        let currentPart = '';
+        let isEscaped = false;
+        this.components = [];
+
+        for (let i = 0; i < source.length; i++) {
+            const char = source[i];
+
+            if (char === ESCAPE_CHARACTER && !isEscaped) {
+                isEscaped = true;
+                continue; 
+            }
+
+            if (char === this.delimiter && !isEscaped) {
+                this.components.push(currentPart);
+                currentPart = '';
+            } else {
+                currentPart += char;
+                isEscaped = false; // Exit escape mode.
+            }
+        }
+        
+        this.components.push(currentPart);
     }
+
 
     public clone(): Name {
-        throw new Error("needs implementation or deletion");
-    }
-
-    public asString(delimiter: string = this.delimiter): string {
-        throw new Error("needs implementation or deletion");
+        const clonedComponents = this.components.slice();
+        return new StringName(clonedComponents.join(this.delimiter), this.getDelimiterCharacter());
     }
 
     public asDataString(): string {
-        throw new Error("needs implementation or deletion");
-    }
+        const escapedComponents = this.components.map(component => {
+            let escaped = component.split(ESCAPE_CHARACTER).join(ESCAPE_CHARACTER + ESCAPE_CHARACTER);
+            
+            escaped = escaped.split(DEFAULT_DELIMITER).join(ESCAPE_CHARACTER + DEFAULT_DELIMITER);
+            
+            return escaped;
+        });
 
-    public isEqual(other: Name): boolean {
-        throw new Error("needs implementation or deletion");
-    }
-
-    public getHashCode(): number {
-        throw new Error("needs implementation or deletion");
-    }
-
-    public isEmpty(): boolean {
-        throw new Error("needs implementation or deletion");
-    }
-
-    public getDelimiterCharacter(): string {
-        throw new Error("needs implementation or deletion");
+        return escapedComponents.join(DEFAULT_DELIMITER);
     }
 
     public getNoComponents(): number {
-        throw new Error("needs implementation or deletion");
+        return this.components.length;
     }
 
     public getComponent(i: number): string {
-        throw new Error("needs implementation or deletion");
+        this.assertValidIndex(i); // PRECONDITION
+        return this.components[i];
     }
 
     public setComponent(i: number, c: string) {
-        throw new Error("needs implementation or deletion");
+        this.assertValidIndex(i); // PRECONDITION
+        this.components[i] = c;
     }
 
     public insert(i: number, c: string) {
-        throw new Error("needs implementation or deletion");
+        this.assertValidIndexLax(i); // PRECONDITION (allows index == count)
+        this.components.splice(i, 0, c);
     }
 
     public append(c: string) {
-        throw new Error("needs implementation or deletion");
+        this.components.push(c);
     }
 
     public remove(i: number) {
-        throw new Error("needs implementation or deletion");
+        this.assertValidIndex(i); // PRECONDITION
+        this.components.splice(i, 1);
     }
 
-    public concat(other: Name): void {
-        throw new Error("needs implementation or deletion");
+    
+    /** PRECONDITION Helper: Asserts index is within the valid range [0, count - 1]. */
+    private assertValidIndex(i: number): void {
+        if (i >= this.getNoComponents() || i < 0) {
+            throw new Error("IllegalArgumentException: Index out of range (i >= count or i < 0)."); 
+        }
+    }
+
+    /** PRECONDITION Helper: Asserts index is within the valid range [0, count]. (Allows insertion at the end) */
+    private assertValidIndexLax(i: number): void {
+        if (i > this.getNoComponents() || i < 0) {
+            throw new Error("IllegalArgumentException: Index out of range (i > count or i < 0).");
+        }
     }
 
 }
