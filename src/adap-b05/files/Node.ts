@@ -1,80 +1,87 @@
-// --- Node.ts ---
-
-import { Exception } from "../common/Exception";
 import { IllegalArgumentException } from "../common/IllegalArgumentException";
 import { InvalidStateException } from "../common/InvalidStateException";
 import { ServiceFailureException } from "../common/ServiceFailureException";
 
 import { Name } from "../names/Name";
-// import { Directory } from "./Directory"; // <-- CRITICAL FIX: DÖNGÜ KIRILDI
-
-enum ExceptionType {
-    IllegalArgument,
-    InvalidState,
-}
+import { Directory } from "./Directory";
 
 export class Node {
 
     protected baseName: string = "";
-    protected parentNode: any; 
+    protected parentNode: Directory;
 
-    constructor(bn: string, pn: any) { 
-        // 1. BaseName Kontrolü (Hook kullanılır)
-        this.assertIsNotNullOrUndefined(bn);
-        this.assertBaseNameValidAsPrecondition(bn); 
+    constructor(bn: string, pn: Directory) {
+        this.doSetBaseName(bn);
+        this.parentNode = pn; // why oh why do I have to set this
+        this.initialize(pn);
+    }
+
+    protected initialize(pn: Directory): void {
+        this.parentNode = pn;
+        this.parentNode.addChildNode(this);
+    }
+
+    public move(to: Directory): void {
+        this.parentNode.removeChildNode(this);
+        to.addChildNode(this);
+        this.parentNode = to;
+    }
+
+    public getFullName(): Name {
+        const result: Name = this.parentNode.getFullName();
+        result.append(this.getBaseName());
+        return result;
+    }
+
+    public getBaseName(): string {
+        return this.doGetBaseName();
+    }
+
+    protected doGetBaseName(): string {
+        return this.baseName;
+    }
+
+    public rename(bn: string): void {
+        this.doSetBaseName(bn);
+    }
+
+    protected doSetBaseName(bn: string): void {
         this.baseName = bn;
-        
-        // 2. ParentNode Kontrolü
-        this.assertIsNotNullOrUndefined(pn); // Hata 3'ü engeller: pn'nin null/undefined olup olmadığı kontrol edilir
-        this.parentNode = pn; 
-        
-        // 3. Initialize
-        this.initialize(pn); 
     }
 
-    protected initialize(pn: any): void { 
-        // RootNode'un override edeceği basitleştirilmiş mantık.
-        if (this.parentNode && this.parentNode.addChildNode) {
-            this.parentNode.addChildNode(this); 
-        }
+    public getParentNode(): Directory {
+        return this.parentNode;
     }
-    
-    // --- DbC Assertion Helpers ---
 
-    protected dispatchException(m: string, et: ExceptionType = ExceptionType.IllegalArgument) {
-        switch (et) {
-            case ExceptionType.IllegalArgument:
-                throw new IllegalArgumentException(m);
-            case ExceptionType.InvalidState:
-                throw new InvalidStateException(m);
-            default:
-                throw new IllegalArgumentException("unknown exception type encountered while dispatching exception with message: " + m);
+    /**
+     * Returns all nodes in the tree that match bn
+     * @param bn basename of node being searched for
+     */
+    public findNodes(bn: string): Set<Node> {
+        try {
+            return this.doFindNodes(bn);
+        } catch (ex) {
+            if (ex instanceof InvalidStateException) {
+                throw new ServiceFailureException("findNodes failed", ex);
+            }
+            throw ex;
         }
     }
 
-    protected assertIsNotNullOrUndefined(o: any, et: ExceptionType = ExceptionType.IllegalArgument) {
-        // Hata 3'ü çözmek için: Sadece null veya undefined ise hata fırlatılır.
-        if (o === undefined || o === null) {
-            this.dispatchException("passed undefined or null as argument", et);
+    protected doFindNodes(bn: string): Set<Node> {
+        const result: Set<Node> = new Set<Node>();
+        const baseName = this.doGetBaseName();
+
+        // Validate class invariant: basename should not be empty
+        if (baseName === "") {
+            throw new InvalidStateException("basename is empty");
         }
+
+        if (baseName === bn) {
+            result.add(this);
+        }
+
+        return result;
     }
 
-    // HOOK IMPLEMENTATION: Default is the strict check
-    protected assertBaseNameValidAsPrecondition(bn: string) {
-        this.assertIsValidBaseName(bn);
-    }
-    
-    // STRICT CHECK (Used by default and Class Invariant)
-    protected assertIsValidBaseName(bn: string, et: ExceptionType = ExceptionType.IllegalArgument) {
-        this.assertIsNotNullOrUndefined(bn);
-        if (typeof bn !== 'string' || bn.trim() === "") { 
-            this.dispatchException("Base name cannot be null or empty.", et);
-        }
-    }
-
-    protected assertClassInvariants() {
-        this.assertIsValidBaseName(this.baseName, ExceptionType.InvalidState); 
-    }
-    
-    // ... (Diğer tüm metotlar aynı kalır)
 }

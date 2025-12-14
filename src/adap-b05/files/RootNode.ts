@@ -1,44 +1,47 @@
-// --- RootNode.ts ---
-
 import { Name } from "../names/Name";
 import { StringName } from "../names/StringName";
 import { Directory } from "./Directory";
+import { Node } from "./Node";
 
 export class RootNode extends Directory {
 
     protected static ROOT_NODE: RootNode = new RootNode();
 
-    public static getRootNode(): RootNode {
+    public static getRootNode() {
         return this.ROOT_NODE;
     }
 
-    protected constructor() {
-        // Hata Çözümü: Node'a geçici olarak geçerli bir ad ("ROOT_TEMP") gönderiyoruz.
-        // pn için null gönderilebilir, çünkü Node'un constructor'ı pn'yi assertIsNotNullOrUndefined ile kontrol eder.
-        super("ROOT_TEMP", null as any); 
+    constructor() {
+        super("", new Object as Directory);
     }
 
-    protected initialize(pn: any): void { 
-        // 1. BaseName'i boş dizeye sıfırla (Kök kuralı).
-        this.baseName = ""; 
-        
-        // 2. Parent'ı kendine set et.
-        this.parentNode = this as Directory; 
-        
-        // Node.ts'deki addChildNode çağrısı atlanmıştır.
-    }
-    
-    // HOOK OVERRIDE: RootNode için basename kontratını gevşetir (boş dizeye izin verir).
-    protected assertBaseNameValidAsPrecondition(bn: string) {
-        // Yalnızca null/undefined kontrolünü korur. Boş dize kontrolü atlanır.
-        this.assertIsNotNullOrUndefined(bn);
+    protected initialize(pn: Directory): void {
+        this.parentNode = this;
     }
 
-    // INVARIANT OVERRIDE: RootNode'un Invariant'ını gevşetir.
-    protected assertClassInvariants() {
-        // RootNode'un Invariant'ı: Sadece null kontrolü yapılır.
-        this.assertIsNotNullOrUndefined(this.baseName, ExceptionType.InvalidState); 
+    public getFullName(): Name {
+        return new StringName("", '/');
     }
 
-    // ... (Diğer metotlar aynı kalır)
+    public move(to: Directory): void {
+        // null operation
+    }
+
+    protected doSetBaseName(bn: string): void {
+        // null operation
+    }
+
+    protected doFindNodes(bn: string): Set<Node> {
+        // RootNode has empty basename by design, skip validation
+        const result: Set<Node> = new Set<Node>();
+
+        // Recursively search through all child nodes
+        for (const child of this.childNodes) {
+            const childResults = child.findNodes(bn);
+            childResults.forEach(node => result.add(node));
+        }
+
+        return result;
+    }
+
 }
